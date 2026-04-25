@@ -574,25 +574,41 @@ class ElderAssistEnv:
                 done=True,
                 info={"warning": "Episode already done"},
             ).to_dict()
-
+    
         self.step_count += 1
         self.response_history.append(action)
         self._update_memory(action)
-
-        reward        = self._compute_step_reward(action)
-
-        # ── REACTIVE LOOP: track consecutive low-reward steps ─────────────────
-        # "Low" = reward below 0.2 — agent failed to help meaningfully
+    
+        # ─────────────────────────────────────────────────────────────
+        # 1. BASE REWARD
+        # ─────────────────────────────────────────────────────────────
+        reward = self._compute_step_reward(action)
+    
+        # ─────────────────────────────────────────────────────────────
+        # 2. REPETITION PENALTY (CRITICAL FIX)
+        # ─────────────────────────────────────────────────────────────
+        if len(self.response_history) >= 2:
+            if self.response_history[-1] == self.response_history[-2]:
+                reward -= 0.2
+                print("[ENV] Repetition penalty applied: -0.4", flush=True)
+    
+        # ─────────────────────────────────────────────────────────────
+        # 3. DIRECT SUCCESS SIGNAL (BOOST LEARNING)
+        # ─────────────────────────────────────────────────────────────
+        if "rahul" in action.lower():
+            reward += 0.15
+    
+        # ─────────────────────────────────────────────────────────────
+        # 4. REACTIVE LOOP (CONFUSION MODEL)
+        # ─────────────────────────────────────────────────────────────
         LOW_REWARD_THRESHOLD = 0.20
-        CONFUSION_PENALTY    = 0.10   # subtracted from next reward automatically
-
+        CONFUSION_PENALTY    = 0.10
+    
         if reward < LOW_REWARD_THRESHOLD:
             self.consecutive_low += 1
         else:
-            self.consecutive_low = 0   # reset on any good step
-
-        # Apply accumulating confusion penalty after 2+ consecutive bad steps.
-        # This models the patient becoming more distressed/confused when help fails.
+            self.consecutive_low = 0
+    
         if self.consecutive_low >= 2:
             penalty = CONFUSION_PENALTY * (self.consecutive_low - 1)
             reward  = round(max(0.0, reward - penalty), 4)
@@ -601,45 +617,66 @@ class ElderAssistEnv:
                 f"(consecutive_low={self.consecutive_low})",
                 flush=True,
             )
-
+    
         self.last_step_reward = reward
-
-        # ── Cap per-step progress contribution so it accumulates across steps ──
-        # Without this, a perfect response scores 0.9 in step 1 → progress = 1.0
-        # → episode ends immediately. Cap at 0.34 so it takes at least 3 steps
-        # to reach target_score=1.0, giving the UI a proper multi-step flow.
+    
+        # ─────────────────────────────────────────────────────────────
+        # 5. PROGRESS UPDATE (SAFE VERSION)
+        # ─────────────────────────────────────────────────────────────
         task_cfg     = TASKS[self.current_task]
         max_steps    = task_cfg["max_steps"]
         MIN_STEPS    = 4
-        max_per_step = round(1.0 / MIN_STEPS, 4)   # 0.3334
-        capped_reward = min(reward, max_per_step)
-
+        max_per_step = 0.25
+    
+        # Prevent negative progress
+        capped_reward = max(0.0, min(reward, max_per_step))
         self.progress = min(self.progress + capped_reward, 1.0)
-
+    
+        # ─────────────────────────────────────────────────────────────
+        # 6. FINAL GRADE (FOR TERMINATION DECISION)
+        # ─────────────────────────────────────────────────────────────
+        final_score = grade(self.current_task, self.response_history)
+    
+        # ─────────────────────────────────────────────────────────────
+        # 7. TERMINATION LOGIC (IMPROVED)
+        # ─────────────────────────────────────────────────────────────
         if self.step_count >= max_steps:
             self.done = True
+    
         elif self.progress >= task_cfg["target_score"] and self.step_count >= MIN_STEPS:
             self.done = True
+    
+        elif final_score >= 0.75 and self.step_count >= MIN_STEPS:
+            # Stable early success (grader-based, not noisy reward)
+            self.done = True
+            print(
+                f"[ENV] Early success termination: grader={final_score:.2f}",
+                flush=True,
+            )
+    
         else:
             self.done = False
-
-        final_score = grade(self.current_task, self.response_history)
-        obs         = self._build_observation()
-
+    
+        # ─────────────────────────────────────────────────────────────
+        # 8. BUILD RESPONSE
+        # ─────────────────────────────────────────────────────────────
+        obs = self._build_observation()
+    
         return StepResult(
             observation=obs,
-            reward=round(reward, 4),          # original reward shown to UI
+            reward=round(reward, 4),
             done=self.done,
             info={
-                "step":               self.step_count,
+                "step":                self.step_count,
                 "cumulative_progress": round(self.progress, 4),
-                "final_grade":        round(final_score, 4) if self.done else None,
-                "task":               self.current_task,
-                "cognitive_score":    self.cognitive_score,
-                "severity":           self.severity,
-                # ── Reactive loop signals ──────────────────────────────────
-                "consecutive_low":    self.consecutive_low,
-                "patient_state":      (
+                "final_grade":         round(final_score, 4) if self.done else None,
+                "task":                self.current_task,
+                "cognitive_score":     self.cognitive_score,
+                "severity":            self.severity,
+    
+                # 🔥 KEY FEATURE (USE IN UI)
+                "consecutive_low":     self.consecutive_low,
+                "patient_state": (
                     "improving"  if reward >= 0.5 else
                     "escalating" if self.consecutive_low >= 2 else
                     "neutral"
@@ -1003,5 +1040,43 @@ class ElderAssistEnv:
         # Penalise extremely verbose responses for mild/minimal patients
         if self.severity in ("mild", "minimal") and len(text.split()) > 80:
             r -= 0.05
+
+        # ── Anti-repetition penalty ────────────────────────────────────────────
+        # If the last two agent responses are identical the agent is stuck in a
+        # loop → strong penalty to break out and force exploration.
+        if len(self.response_history) >= 2:
+            if self.response_history[-1] == self.response_history[-2]:
+                r -= 0.40
+                print(
+                    "[ENV] Anti-repetition penalty: -0.40 (identical consecutive responses)",
+                    flush=True,
+                )
+
+        # ── Task-specific progression bonus ────────────────────────────────────
+        # Extra reward when the response contains the key resolution signal for
+        # the current task.  Directly encourages correct completion.
+        if self.current_task == "memory_recall" and "rahul" in text:
+            r += 0.30
+        elif self.current_task == "routine_management" and (
+            any(w in text for w in ["set", "scheduled", "reminder", "alarm"])
+            and any(w in text for w in ["9", "9am", "9 am", "morning"])
+        ):
+            r += 0.20
+        elif self.current_task == "emergency_navigation" and (
+            any(w in text for w in ["call", "family", "daughter"])
+            and any(w in text for w in ["location", "landmark", "address", "gps"])
+        ):
+            r += 0.20
+
+        # ── Strategy-switch penalty ────────────────────────────────────────────
+        # After 2 consecutive bad steps, apply an additional penalty to signal
+        # the agent must change approach (already tracked in consecutive_low above).
+        if self.consecutive_low >= 2:
+            r = round(max(0.0, r - 0.20), 4)
+            print(
+                f"[ENV] Strategy-switch penalty: -0.20 "
+                f"(consecutive_low={self.consecutive_low})",
+                flush=True,
+            )
 
         return round(max(0.0, min(r, 1.0)), 4)

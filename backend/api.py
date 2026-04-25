@@ -309,8 +309,13 @@ def _apply_step(action: str, reasoning: dict) -> Dict[str, Any]:
     task_name      = getattr(env, "current_task", "")
     next_msg       = step_result["observation"].get("message", "") if isinstance(step_result["observation"], dict) else ""
     next_emotion   = detect_emotion(next_msg)
-    next_state_key = _get_state_key(task_name, next_emotion, severity)
-    update_q(task_name, reward, next_state_key)
+    next_state_key = _get_state_key(task_name, next_emotion, severity, step=step_num)
+    from backend.simulation import compute_shaped_reward
+
+    success = reward >= 0.5
+    shaped  = compute_shaped_reward(next_emotion, success)
+    
+    update_q(task_name, shaped, next_state_key)
 
     step_record = {
         "episode":         episode_number,

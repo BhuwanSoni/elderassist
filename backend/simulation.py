@@ -133,10 +133,10 @@ def run_simulation(episodes=50, max_steps=10, save_path="data/rewards.csv"):
             # Compute next state key for Bellman update
             next_msg      = state["message"] if isinstance(state, dict) else state.message
             next_emotion  = detect_emotion(next_msg)
-            next_state_key = _get_state_key(task, next_emotion, severity)
+            next_state_key = _get_state_key(task, next_emotion, severity, step=step_count)
 
             # Use shaped reward for Q-learning (smoother gradient signal)
-            success       = reward >= 0.45
+            success       = reward >= 0.50
             shaped        = compute_shaped_reward(next_emotion, success)
             update_q(task, shaped, next_state_key)
 
