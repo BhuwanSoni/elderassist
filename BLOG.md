@@ -271,3 +271,18 @@ ElderAssist AI is not just a chatbot.
 (https://huggingface.co/spaces/Rawbhuwan/elderassist-final)
 
 ---
+
+---
+
+## 🚀 Training Notebook
+
+To ensure reproducibility, the full training pipeline is available:
+
+👉 https://colab.research.google.com/drive/1lH8EyxhUA2_3nFCT4BIz_YNQazPkSiht?usp=sharing
+
+This includes:
+- Dataset loading
+- Feature engineering
+- Model training
+- Threshold tuning
+- Performance evaluation

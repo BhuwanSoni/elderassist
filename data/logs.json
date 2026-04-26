@@ -1,0 +1,39 @@
+{
+  "live_episode": 2,
+  "current_steps": [
+    {
+      "episode": 2,
+      "step": 1,
+      "action": "Think about what you did this morning \u2014 does that help you work out roughly what time and day it is?",
+      "reasoning": {
+        "emotion": "neutral",
+        "task": "orientation_check",
+        "step": 0,
+        "memory_used": "none",
+        "mode": "RL+RULE",
+        "decision_layer": "rl_rule_bank",
+        "severity": "mild",
+        "confidence": "high",
+        "flags": [
+          "rl_action:give_hint",
+          "keyword_bank"
+        ],
+        "rl_action": "give_hint",
+        "q_values": {
+          "reassure": 0.0,
+          "give_hint": 0.0,
+          "ask_question": 0.0,
+          "direct_answer": 0.0
+        }
+      },
+      "reward": 0.5,
+      "cumulative": 0.25,
+      "done": false,
+      "severity": "mild",
+      "cognitive_score": 0.6729,
+      "task": "orientation_check",
+      "timestamp": 1777100024.15
+    }
+  ],
+  "completed": []
+}

@@ -1,0 +1,7 @@
+1,memory_recall,1,0.9,0.9,moderate,0.5,1776854170.12
+1,memory_recall,1,0.9,0.9,moderate,0.5,1776856602.11
+1,memory_recall,1,0.9,0.25,mild,0.6729,1776868589.85
+1,memory_recall,1,0.9,0.25,mild,0.6729,1776954532.87
+2,object_recall,1,0.4,0.25,mild,0.6729,1777097752.07
+1,object_recall,1,0.4,0.25,mild,0.6729,1777098853.48
+2,orientation_check,1,0.5,0.25,mild,0.6729,1777100024.16

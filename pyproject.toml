@@ -1,0 +1,13 @@
+[project]
+name = "elderassist"
+version = "0.1.0"
+description = "ElderAssist Dementia AI Caregiver"
+dependencies = [
+    "openenv-core>=0.2.0"
+]
+
+[project.scripts]
+server = "server.app:main"
+
+[tool.openenv]
+entrypoint = "app:app"

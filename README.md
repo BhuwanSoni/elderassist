@@ -200,6 +200,17 @@ elderassist-env/
 * 🏥 Integration with healthcare providers
 
 ---
+## 📊 Model Training (Reproducibility)
+
+👉 Google Colab Notebook:
+https://colab.research.google.com/drive/1lH8EyxhUA2_3nFCT4BIz_YNQazPkSiht?usp=sharing
+
+This notebook contains:
+- Data preprocessing
+- Feature engineering
+- XGBoost training
+- Threshold optimization
+- Evaluation metrics (ROC, PR, Confusion Matrix)
 
 ## 👨‍💻 Author
 

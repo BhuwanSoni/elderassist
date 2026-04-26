@@ -1,0 +1,82 @@
+name: elderassist-env
+version: "1.0.0"
+description: >
+  ElderAssistEnv simulates an AI caregiver helping elderly patients with dementia.
+  The agent must handle memory recall, medication reminders, and emergency navigation
+  across increasing levels of difficulty. Realistic cognitive noise and memory decay
+  make this environment genuinely challenging for frontier models.
+
+author: ElderAssist Team
+tags:
+  - openenv
+  - healthcare
+  - elderly-care
+  - dementia
+  - multi-step
+  - real-world
+
+entrypoint: server:app
+
+tasks:
+  - name: memory_recall
+    description: "Remember and confirm the patient's son's name across multiple turns."
+    difficulty: easy
+    max_steps: 5
+    reward_range: [0.0, 1.0]
+
+  - name: routine_management
+    description: "Extract and confirm a medicine reminder at 9 AM from vague patient input."
+    difficulty: medium
+    max_steps: 6
+    reward_range: [0.0, 1.0]
+
+  - name: emergency_navigation
+    description: "Guide a disoriented elderly patient to safety — multi-step, highest difficulty."
+    difficulty: hard
+    max_steps: 8
+    reward_range: [0.0, 1.0]
+
+observation_space:
+  type: object
+  properties:
+    message:
+      type: string
+      description: Patient's utterance for this turn
+    memory:
+      type: object
+      description: Current memory state (short_term, long_term, forgotten)
+    task:
+      type: string
+      description: Current task name
+    step:
+      type: integer
+    progress:
+      type: number
+      description: Cumulative reward so far (0.0 to 1.0)
+    hint:
+      type: string
+      description: Optional hint for the agent
+
+action_space:
+  type: object
+  properties:
+    message:
+      type: string
+      description: Agent's natural language response to the patient
+
+reward:
+  type: continuous
+  range: [0.0, 1.0]
+  description: >
+    Partial rewards at each step based on keywords, relevance, and task-specific
+    criteria. Penalties for too-short or meaningless responses. Final grade
+    computed by deterministic graders.
+
+endpoints:
+  reset: POST /reset
+  step:  GET /step
+  state: GET  /state
+
+docker:
+  port: 7860
+  health_check: GET /health

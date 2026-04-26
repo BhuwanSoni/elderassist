@@ -1,0 +1,8 @@
+{
+  "orientation_check__neutral__mild": {
+    "reassure": 0.0,
+    "give_hint": 0.075,
+    "ask_question": 0.0,
+    "direct_answer": 0.0
+  }
+}
